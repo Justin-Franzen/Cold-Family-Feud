@@ -18,6 +18,7 @@ export default function Game(props) {
   const ws = useRef(null);
   let refreshCounter = 0;
   let pongInterval;
+  const [titleAudio] = useState(typeof Audio !== "undefined" && new Audio("title.mp3"));
 
   useEffect(() => {
     fetch("/api/ws").finally(() => {
@@ -98,6 +99,10 @@ export default function Game(props) {
         } else if (json.action === "change_lang") {
           console.debug("Language Change", json.data);
           i18n.changeLanguage(json.data);
+        } else if (json.action === "title_start") {
+          titleAudio.play();
+        } else if (json.action === "title_stop") {
+          titleAudio.pause();
         } else {
           console.error("didn't expect", json);
         }

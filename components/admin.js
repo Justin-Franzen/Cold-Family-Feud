@@ -14,15 +14,38 @@ function debounce(callback, wait = 400) {
     }, wait);
   };
 }
+const playButton ={
+  borderTop: "10px solid white",
+  borderBottom: "10px solid white",
+  borderLeft: "20px solid black",
+  height: "0px",
+}
+const stopButton ={
+  border: "10px solid black",
+  height: "0px",
+}
 
-function TitleMusic() {
+function TitleMusic(props) {
   const { i18n, t } = useTranslation();
   return (
     <div class="flex flex-row items-center space-x-5  p-5">
       <h3 class="text-2xl ">{t("titleMusic")}</h3>
-      <audio controls>
-        <source src="title.mp3" type="audio/mpeg" />
-      </audio>
+      <button
+        class="border-4 rounded p-3 text-2xl flex-grow"
+        onClick={() => {
+          props.send({ action: "title_start" });
+        }}
+      >
+        <div style={playButton}></div>
+      </button>
+      <button
+        class="border-4 rounded p-3 text-2xl flex-grow bg-"
+        onClick={() => {
+          props.send({ action: "title_stop" });
+        }}
+      >
+        <div style={stopButton}></div>
+      </button>
     </div>
   );
 }
@@ -350,7 +373,9 @@ export default function Admin(props) {
             <div class="flex-col space-y-5 p-5">
               <hr />
               <div class="flex flex-row justify-evenly items-baseline">
-                <TitleMusic />
+                <TitleMusic 
+                send={send}
+                />
                 {/* CURRENT SCREEN TEXT */}
                 <p class="text-2xl text-center pt-5">
                   {" "}
@@ -512,9 +537,8 @@ export default function Admin(props) {
                 <div class=" text-white rounded border-4 grid grid-rows-4 grid-flow-col  p-3 mx-10 mt-5 gap-3 ">
                   {current_round.answers.map((x) => (
                     <div
-                      class={`${
-                        x.trig ? "bg-gray-600" : "bg-blue-600"
-                      } font-extrabold uppercase rounded border-2 text-2xl rounded `}
+                      class={`${x.trig ? "bg-gray-600" : "bg-blue-600"
+                        } font-extrabold uppercase rounded border-2 text-2xl rounded `}
                     >
                       <button
                         class="flex flex-row p-5 justify-center min-h-full items-center min-w-full"
@@ -738,19 +762,19 @@ export default function Admin(props) {
                   {game.final_round?.map((x, index) => (
                     <div class="flex-col flex space-y-5 p-12 border-2">
                       <p class="text-4xl font-bold ">{x.question}</p>
-                      {game.is_final_second? (
-                       <div class="text-2xl font-bold">
-                       First round answer: {'gameCopy' in game ? game.gameCopy[index].input : ""}
-                       <button
-                           class="border-4 rounded p-3 text-2xl flex-grow float-right bg-red-200"
-                           onClick={() => {
-                             send({ action: "final_wrong" });
-                           }}
-                         >
-                           {t("wrong")}
-                         </button>
-                       </div>
-                      ):(
+                      {game.is_final_second ? (
+                        <div class="text-2xl font-bold">
+                          First round answer: {'gameCopy' in game ? game.gameCopy[index].input : ""}
+                          <button
+                            class="border-4 rounded p-3 text-2xl flex-grow float-right bg-red-200"
+                            onClick={() => {
+                              send({ action: "final_wrong" });
+                            }}
+                          >
+                            {t("wrong")}
+                          </button>
+                        </div>
+                      ) : (
                         <div></div>
                       )}
                       <div class="flex flex-row space-x-5 pb-7">
@@ -784,8 +808,8 @@ export default function Admin(props) {
                       <div class="flex flex-row ">
                         <button
                           class="border-4 rounded p-5 text-3xl flex-grow"
-                          disabled = {!x.revealed}
-                          style = {x.revealed ? {} : disabledButton}
+                          disabled={!x.revealed}
+                          style={x.revealed ? {} : disabledButton}
                           onClick={() => {
                             x.points = 0;
                             x.revealed_points = true;
@@ -811,8 +835,8 @@ export default function Admin(props) {
 
                         <button
                           class="border-4 rounded p-5 text-3xl flex-grow"
-                          disabled = {!x.revealed}
-                          style = {x.revealed ? {} : disabledButton}
+                          disabled={!x.revealed}
+                          style={x.revealed ? {} : disabledButton}
                           onClick={() => {
                             x.points = x.answers[x.selection][1];
                             x.revealed_points = true;
