@@ -120,14 +120,25 @@ export default function Buzzer(props) {
         >
           {t("quit")}
         </button>
-        {game.is_final_second ? (
-          <div>
+        {game.is_final_round ? (
+          <div class="p-5">
+            {game.final_round?.map((q) => (
+              <div class="flex-col flex space-y-5 p-2 border-2">
+                <br />
+                <p class="text-4xl font-bold ">{q.question}</p>
+                {game.is_final_second ? (
+                  <p class="text-3xl text-center"> {q.answers[0][0]} - {q.answers[0][1]}</p>
+                ) : (<div></div>)}
+              </div>
+            ))}
           </div>
-        ):(
-            <div>
-              <br/>
+        ) : (
+          <div class="p-5">
+            <div class="flex-col flex space-y-5 p-12 border-2">
+              <p class="text-3xl text-center">{game.rounds[game.round].answers.length} answers on the board</p>
               <p class="text-4xl font-bold ">{game.rounds[game.round].question}</p>
             </div>
+          </div>
         )}
       </div>
     );
