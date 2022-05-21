@@ -9,7 +9,7 @@ function debounce(callback, wait = 400) {
   let timeout;
   return (...args) => {
     clearTimeout(timeout);
-    timeout = setTimeout(function () {
+    timeout = setTimeout(function() {
       callback.apply(this, args);
     }, wait);
   };
@@ -29,23 +29,10 @@ function TitleMusic(props) {
   const { i18n, t } = useTranslation();
   return (
     <div class="flex flex-row items-center space-x-5  p-5">
-      <h3 class="text-2xl ">{t("titleMusic")}</h3>
-      <button
-        class="border-4 rounded p-3 text-2xl flex-grow"
-        onClick={() => {
-          props.send({ action: "title_start" });
-        }}
-      >
-        <div style={playButton}></div>
-      </button>
-      <button
-        class="border-4 rounded p-3 text-2xl flex-grow bg-"
-        onClick={() => {
-          props.send({ action: "title_stop" });
-        }}
-      >
-        <div style={stopButton}></div>
-      </button>
+      <h3 class="text-2xl ">{t("Title Music")}</h3>
+      <audio controls>
+        <source src="title.mp3" type="audio/mpeg" />
+      </audio>
     </div>
   );
 }
@@ -71,7 +58,7 @@ function TeamControls(props) {
         }}
       >
         {t("team")} {t("number", { count: props.team + 1 })}:{" "}
-        {props.game.teams[props.team].name} {t("getsPoints")}
+        {props.game.teams[props.team].name} {t("Gets Points")}
       </button>
       <button
         class="border-4 bg-red-200 text-2xl rounded p-10"
@@ -91,6 +78,83 @@ function TeamControls(props) {
       </button>
     </>
   );
+}
+
+function FinalRoundButtonControls(props) {
+  const { i18n, t } = useTranslation();
+  let control_round = props.game.is_final_second
+    ? props.game.final_round_2
+    : props.game.final_round;
+  return control_round?.map((x) => (
+    <div class="flex-col flex space-y-5 p-12 border-2">
+      <p class="text-4xl font-bold ">{x.question}</p>
+      <div class="flex flex-row space-x-5 pb-7">
+        {/* ANSWER SELECTION FINAL ROUND */}
+        <input
+          class="border-4 rounded text-3xl w-48 p-5 flex-grow"
+          placeholder={t("Answer")}
+          value={x.input}
+          onChange={(e) => {
+            x.input = e.target.value;
+            props.setGame((prv) => ({ ...prv }));
+          }}
+        />
+        <select
+          value={x.selection}
+          class="border-4 rounded p-2 text-2xl flex-grow"
+          onChange={(e) => {
+            x.selection = parseInt(e.target.value);
+            props.setGame((prv) => ({ ...prv }));
+            props.send({ action: "data", data: props.game });
+          }}
+        >
+          {x.answers.map((key, index) => (
+            <option value={index}>
+              {x.answers[index][0]} {x.answers[index][1]}
+            </option>
+          ))}
+        </select>
+        {/* FINAL ROUND ANSWER BUTTON GROUP */}
+      </div>
+      <div class="flex flex-row ">
+        <button
+          class="border-4 rounded p-5 text-3xl flex-grow"
+          onClick={() => {
+            x.points = 0;
+            props.setGame((prv) => ({ ...prv }));
+            props.send({ action: "data", data: props.game });
+            props.send({ action: "final_wrong" });
+          }}
+        >
+          {t("wrong")}
+        </button>
+
+        <button
+          class="border-4 rounded p-5 text-3xl flex-grow"
+          onClick={() => {
+            x.revealed = true;
+            props.setGame((prv) => ({ ...prv }));
+            props.send({ action: "data", data: props.game });
+            props.send({ action: "final_reveal" });
+          }}
+        >
+          {t("Reveal Answer")}
+        </button>
+
+        <button
+          class="border-4 rounded p-5 text-3xl flex-grow"
+          onClick={() => {
+            x.points = x.answers[x.selection][1];
+            props.setGame((prv) => ({ ...prv }));
+            props.send({ action: "data", data: props.game });
+            props.send({ action: "final_submit" });
+          }}
+        >
+          {t("submit")}
+        </button>
+      </div>
+    </div>
+  ));
 }
 
 export default function Admin(props) {
@@ -117,12 +181,13 @@ export default function Admin(props) {
 
   useEffect(() => {
     setInterval(() => {
-      if (ws.current.readyState === 3) {
+      if (ws.current.readyState !== 1) {
         setError(
           `lost connection to server refreshing in ${10 - refreshCounter}`
         );
         refreshCounter++;
         if (refreshCounter >= 10) {
+          console.debug("admin reload()");
           location.reload();
         }
       } else {
@@ -163,9 +228,9 @@ export default function Admin(props) {
     if (game.title) {
       current_screen = t("title");
     } else if (game.is_final_round && !game.is_final_second) {
-      current_screen = `${t("finalRound")} ${t("number", { count: 1 })}`;
+      current_screen = `${t("Final Round")} ${t("number", { count: 1 })}`;
     } else if (game.is_final_round && game.is_final_second) {
-      current_screen = `${t("finalRound")} ${t("number", { count: 2 })}`;
+      current_screen = `${t("Final Round")} ${t("number", { count: 2 })}`;
     } else {
       current_screen = `${t("round")} ${t("number", {
         count: game.round + 1,
@@ -183,8 +248,13 @@ export default function Admin(props) {
     };
 
     return (
-      <div style={{ minWidth: "100vh" }}>
-        <div class="min-w-full">
+      <div
+        class="lg:min-w-0"
+        style={{
+          minWidth: "100vh",
+        }}
+      >
+        <div class="min-h-full">
           {/* ROOM CODE TEXT */}
           <p class="text-center text-8xl p-4 font-semibold uppercase">
             {props.room}
@@ -192,26 +262,30 @@ export default function Admin(props) {
           <hr />
           <div class="flex flex-row justify-evenly p-5 ">
             {/* ADMIN BUTTONS */}
-            <div class="w-48 hover:shadow-md rounded bg-green-200 p-2 flex justify-center">
-              <a href="/game" target="_blank">
-                <button class="text-2xl">{t("Open Game Window")}</button>
-              </a>
-            </div>
-            <div class="w-48 hover:shadow-md rounded bg-blue-200 p-2 flex justify-center">
-              <a href="/new">
-                <button class="text-2xl">{t("newGame")}</button>
-              </a>
-            </div>
-            <div class="hover:shadow-md rounded bg-red-200 p-2 w-32 flex justify-center">
-              <button
-                class="text-2xl"
-                onClick={() => {
-                  props.quitGame(true);
-                }}
-              >
-                {t("Quit")}
+            <a href="/game" target="_blank">
+              <button class="text-2xl">
+                <div class="w-48 hover:shadow-md rounded bg-green-200 p-2 flex justify-center">
+                  {t("Open Game Window")}
+                </div>
               </button>
-            </div>
+            </a>
+            <a href="/new">
+              <button class="text-2xl">
+                <div class="w-48 hover:shadow-md rounded bg-blue-200 p-2 flex justify-center">
+                  {t("Create New Game")}
+                </div>
+              </button>
+            </a>
+            <button
+              class="text-2xl"
+              onClick={() => {
+                props.quitGame(true);
+              }}
+            >
+              <div class="hover:shadow-md rounded bg-red-200 p-2 w-32 flex justify-center">
+                {t("Quit")}
+              </div>
+            </button>
           </div>
           <div class="flex flex-row justify-evenly items-center m-5">
             <LanguageSwitcher
@@ -262,13 +336,13 @@ export default function Admin(props) {
                       if (file) {
                         var reader = new FileReader();
                         reader.readAsText(file, "utf-8");
-                        reader.onload = function (evt) {
+                        reader.onload = function(evt) {
                           let data = JSON.parse(evt.target.result);
                           console.debug(data);
                           // TODO some error checking for invalid game data
                           send({ action: "load_game", data: data });
                         };
-                        reader.onerror = function (evt) {
+                        reader.onerror = function(evt) {
                           console.error("error reading file");
                         };
                       }
@@ -278,7 +352,7 @@ export default function Admin(props) {
               </div>
               <div class="flex flex-row">
                 <span class="translate-x-3 px-2 text-black text-opacity-50 flex-shrink inline translate-y-3 transform bg-white ">
-                  {t("loadGame")}
+                  {t("Load Game")}
                 </span>
                 <div class="flex-grow" />
               </div>
@@ -291,7 +365,7 @@ export default function Admin(props) {
         <div class="pt-5">
           {/* TITLE TEXT INPUT */}
           <div class="grid grid-cols-3 gap-5 px-12 justify-items-start">
-            <p class="text-2xl">{t("titleText")}:</p>
+            <p class="text-2xl">{t("Title Text")}:</p>
             <input
               class="border-4 rounded text-4xl w-80 col-span-2"
               onChange={debounce((e) => {
@@ -299,7 +373,7 @@ export default function Admin(props) {
                 props.setGame((prv) => ({ ...prv }));
                 send({ action: "data", data: game });
               })}
-              placeholder={t("myFamilyPlaceHolder")}
+              placeholder={t("My Family")}
               defaultValue={game.title_text}
             ></input>
             <p class="text-2xl">{t("Team 1")}:</p>
@@ -312,7 +386,7 @@ export default function Admin(props) {
                   props.setGame((prv) => ({ ...prv }));
                   send({ action: "data", data: game });
                 })}
-                placeholder={t("teamNamePlaceHolder")}
+                placeholder={t("Team Name")}
                 defaultValue={game.teams[0].name}
               ></input>
               {/* TEAM 1 POINTS CHANGER */}
@@ -342,7 +416,7 @@ export default function Admin(props) {
                   props.setGame((prv) => ({ ...prv }));
                   send({ action: "data", data: game });
                 })}
-                placeholder={t("teamNamePlaceHolder")}
+                placeholder={t("Team Name")}
                 defaultValue={game.teams[1].name}
               ></input>
               {/* TEAM 2 POINTS CHANGER */}
@@ -366,7 +440,7 @@ export default function Admin(props) {
         {error !== "" ? <p class="text-2xl text-red-700">{error}</p> : null}
         {game.rounds == null ? (
           <p class="text-2xl text-center py-20 text-black text-opacity-50">
-            [{t("pleaseLoadGame")}]
+            [{t("Please load a game")}]
           </p>
         ) : (
           <div>
@@ -379,7 +453,7 @@ export default function Admin(props) {
                 {/* CURRENT SCREEN TEXT */}
                 <p class="text-2xl text-center pt-5">
                   {" "}
-                  {t("currentScreen")}: {current_screen}
+                  {t("Current Screen")}: {current_screen}
                 </p>
               </div>
 
@@ -389,11 +463,14 @@ export default function Admin(props) {
                   class="border-4 rounded p-10 text-2xl flex-grow"
                   onClick={() => {
                     game.title = true;
+                    game.round = 0;
+                    game.is_final_round = false;
+                    game.is_final_second = false;
                     props.setGame((prv) => ({ ...prv }));
                     send({ action: "data", data: game });
                   }}
                 >
-                  {t("titleCard")}
+                  {t("Title Card")}
                 </button>
 
                 {/* FINAL ROUND BUTTON */}
@@ -412,7 +489,7 @@ export default function Admin(props) {
                       });
                     }}
                   >
-                    {t("finalRound")}
+                    {t("Final Round")}
                   </button>
                 ) : null}
 
@@ -463,7 +540,7 @@ export default function Admin(props) {
                     send({ action: "data", data: game });
                   }}
                 >
-                  {t("startRoundOne")}
+                  {t("Start Round 1")}
                 </button>
 
                 {/* NEXT ROUND BUTTON */}
@@ -488,7 +565,7 @@ export default function Admin(props) {
                     send({ action: "data", data: game });
                   }}
                 >
-                  {t("nextRound")}
+                  {t("Next Round")}
                 </button>
               </div>
 
@@ -570,7 +647,7 @@ export default function Admin(props) {
 
                 {/* BUZZERS AND PLAYERS */}
                 <div class="grid grid-cols-2 gap-4 p-5">
-                  <h1 class="text-2xl capitalize">{t("buzzerOrder")}</h1>
+                  <h1 class="text-2xl capitalize">{t("Buzzer Order")}</h1>
                   <h1 class="text-2xl capitalize">{t("players")}</h1>
                   <div class="border-4 h-48 overflow-y-scroll rounded p-5 text-center">
                     <div class="flex flex-col  h-full space-y-2 justify-between">
@@ -584,20 +661,20 @@ export default function Admin(props) {
                                 send({ action: "clearbuzzers" });
                               }}
                             >
-                              {t("clearBuzzers")}
+                              {t("Clear Buzzers")}
                             </button>
                             <p class="text-black text-opacity-50">
-                              {t("buzzerHelpText")}
+                              {t("Changing rounds also clears buzzers")}
                             </p>
                           </div>
                         ) : (
                           <div class="flex flex-row items-center space-x-5">
                             {/* disabled clear buzzers button */}
                             <button class="text-2xl border-4 bg-gray-300 rounded p-2">
-                              {t("clearBuzzers")}
+                              {t("Clear Buzzers")}
                             </button>
                             <p class="text-black text-opacity-50">
-                              {t("buzzerHelpText")}
+                              {t("Changing rounds also clears buzzers")}
                             </p>
                           </div>
                         )}
@@ -608,13 +685,13 @@ export default function Admin(props) {
                           <div class="flex flex-row space-x-5 justify-center">
                             <p>
                               {t("number", { count: i + 1 })}.{" "}
-                              {game.registeredPlayers[x.id].name}
+                              {game.registeredPlayers[x.id]?.name}
                             </p>
                             <p>
                               {t("team")}:{" "}
                               {
-                                game.teams[game.registeredPlayers[x.id].team]
-                                  .name
+                                game.teams[game.registeredPlayers[x.id]?.team]
+                                  ?.name
                               }
                             </p>
                             <p>
@@ -636,7 +713,7 @@ export default function Admin(props) {
                 <div class="p-5">
                   {/* FINAL ROUND TEXT */}
                   <h2 class="text-6xl text-center">
-                    {t("finalRound")}{" "}
+                    {t("Final Round")}{" "}
                     {t("number", { count: game.is_final_second ? "2" : "1" })}
                   </h2>
                   <div class="flex py-5 items-center flex-row justify-evenly">
@@ -647,16 +724,7 @@ export default function Admin(props) {
                         onClick={() => {
                           console.debug(game);
                           game.is_final_second = true;
-                          game.gameCopy = JSON.parse(
-                            JSON.stringify(game.final_round)
-                          );
-                          game.final_round.forEach((rnd) => {
-                            rnd.selection = 0;
-                            rnd.points = 0;
-                            rnd.input = "";
-                            rnd.revealed = false;
-                            rnd.selection = 0;
-                          });
+                          game.hide_first_round = true;
                           props.setGame((prv) => ({ ...prv }));
                           send({ action: "data", data: game });
                           send({
@@ -665,7 +733,7 @@ export default function Admin(props) {
                           });
                         }}
                       >
-                        {t("start")} {t("finalRound")}{" "}
+                        {t("start")} {t("Final Round")}{" "}
                         {t("number", { count: 2 })}
                       </button>
                     ) : (
@@ -675,14 +743,8 @@ export default function Admin(props) {
                           class="border-4 rounded p-5 text-3xl"
                           onClick={() => {
                             game.is_final_round = true;
+                            game.hide_first_round = false;
                             game.is_final_second = false;
-                            game.final_round.forEach((rnd, index) => {
-                              rnd.input = game.gameCopy[index]?.input;
-                              rnd.points = game.gameCopy[index]?.points;
-                              rnd.revealed = true;
-                              rnd.selection = game.gameCopy[index]?.selection;
-                            });
-                            game.gameCopy = [];
                             props.setGame((prv) => ({ ...prv }));
                             send({ action: "data", data: game });
                             send({
@@ -691,7 +753,7 @@ export default function Admin(props) {
                             });
                           }}
                         >
-                          {t("backTo")} {t("finalRound")}{" "}
+                          {t("Back To")} {t("Final Round")}{" "}
                           {t("number", { count: 1 })}
                         </button>
                         {game.is_final_second ? (
@@ -706,7 +768,7 @@ export default function Admin(props) {
                                   send({ action: "data", data: game });
                                 }}
                               >
-                                {t("revealFirstRoundAnswers")}
+                                {t("Reveal First Round Answers")}
                               </button>
                             ) : (
                               // HIDE FIRST ROUND ANSWERS
@@ -718,7 +780,7 @@ export default function Admin(props) {
                                   send({ action: "data", data: game });
                                 }}
                               >
-                                {t("hideFirstRoundAnswers")}
+                                {t("Hide First Round Answers")}
                               </button>
                             )}
                           </div>
@@ -744,7 +806,7 @@ export default function Admin(props) {
                         }
                       }}
                     >
-                      {t("startTimer")}
+                      {t("Start Timer")}
                     </button>
 
                     {/* STOP TIMER */}
@@ -754,102 +816,17 @@ export default function Admin(props) {
                         send({ action: "stop_timer" });
                       }}
                     >
-                      {t("stopTimer")}
+                      {t("Stop Timer")}
                     </button>
                   </div>
 
                   {/* FINAL ROUND QUESTIONS AND ANSWERS */}
-                  {game.final_round?.map((x, index) => (
-                    <div class="flex-col flex space-y-5 p-12 border-2">
-                      <p class="text-4xl font-bold ">{x.question}</p>
-                      {game.is_final_second ? (
-                        <div class="text-2xl font-bold">
-                          First round answer: {'gameCopy' in game ? game.gameCopy[index].input : ""}
-                          <button
-                            class="border-4 rounded p-3 text-2xl flex-grow float-right bg-red-200"
-                            onClick={() => {
-                              send({ action: "final_wrong" });
-                            }}
-                          >
-                            {t("wrong")}
-                          </button>
-                        </div>
-                      ) : (
-                        <div></div>
-                      )}
-                      <div class="flex flex-row space-x-5 pb-7">
-                        {/* ANSWER SELECTION FINAL ROUND */}
-                        <input
-                          class="border-4 rounded text-3xl w-48 p-5 flex-grow"
-                          placeholder={t("answer")}
-                          value={x.input}
-                          onChange={(e) => {
-                            x.input = e.target.value;
-                            props.setGame((prv) => ({ ...prv }));
-                          }}
-                        />
-                        <select
-                          value={x.selection}
-                          class="border-4 rounded p-2 text-2xl flex-grow"
-                          onChange={(e) => {
-                            x.selection = parseInt(e.target.value);
-                            props.setGame((prv) => ({ ...prv }));
-                            send({ action: "data", data: game });
-                          }}
-                        >
-                          {x.answers.map((key, index) => (
-                            <option value={index}>
-                              {x.answers[index][0]} {x.answers[index][1]}
-                            </option>
-                          ))}
-                        </select>
-                        {/* FINAL ROUND ANSWER BUTTON GROUP */}
-                      </div>
-                      <div class="flex flex-row ">
-                        <button
-                          class="border-4 rounded p-5 text-3xl flex-grow"
-                          disabled={!x.revealed}
-                          style={x.revealed ? {} : disabledButton}
-                          onClick={() => {
-                            x.points = 0;
-                            x.revealed_points = true;
-                            props.setGame((prv) => ({ ...prv }));
-                            send({ action: "data", data: game });
-                            send({ action: "final_wrong" });
-                          }}
-                        >
-                          {t("wrong")}
-                        </button>
-
-                        <button
-                          class="border-4 rounded p-5 text-3xl flex-grow"
-                          onClick={() => {
-                            x.revealed = true;
-                            props.setGame((prv) => ({ ...prv }));
-                            send({ action: "data", data: game });
-                            send({ action: "final_reveal" });
-                          }}
-                        >
-                          {t("revealAnswer")}
-                        </button>
-
-                        <button
-                          class="border-4 rounded p-5 text-3xl flex-grow"
-                          disabled={!x.revealed}
-                          style={x.revealed ? {} : disabledButton}
-                          onClick={() => {
-                            x.points = x.answers[x.selection][1];
-                            x.revealed_points = true;
-                            props.setGame((prv) => ({ ...prv }));
-                            send({ action: "data", data: game });
-                            send({ action: "final_submit" });
-                          }}
-                        >
-                          {t("submit")}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                  <FinalRoundButtonControls
+                    game={game}
+                    setGame={props.setGame}
+                    send={send}
+                    game={game}
+                  />
                 </div>
               </div>
             )}
