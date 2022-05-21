@@ -23,7 +23,7 @@ export default function Game(props) {
   useEffect(() => {
     fetch("/api/ws").finally(() => {
       ws.current = new WebSocket(`wss://${window.location.host}/api/ws`);
-      ws.current.onopen = function () {
+      ws.current.onopen = function() {
         console.log("game connected to server");
         let session = cookieCutter.get("session");
         console.debug(session);
@@ -42,13 +42,13 @@ export default function Game(props) {
         }
       };
 
-      ws.current.onmessage = function (evt) {
+      ws.current.onmessage = function(evt) {
         var received_msg = evt.data;
         let json = JSON.parse(received_msg);
         console.debug(json);
         if (json.action === "data") {
           if (json.data.title_text === "Change Me") {
-            json.data.title_text = t("changeMe");
+            json.data.title_text = t("Change Me");
           }
           if (json.data.teams[0].name === "Team 1") {
             json.data.teams[0].name = `${t("team")} ${t("number", {
@@ -109,12 +109,13 @@ export default function Game(props) {
       };
 
       setInterval(() => {
-        if (ws.current.readyState === 3) {
+        if (ws.current.readyState !== 1) {
           setError(
             `lost connection to server refreshing in ${10 - refreshCounter}`
           );
           refreshCounter++;
           if (refreshCounter >= 10) {
+            console.debug("game reload()");
             location.reload();
           }
         } else {
@@ -129,11 +130,17 @@ export default function Game(props) {
     if (game.title) {
       gameSession = <Title game={game} />;
     } else if (game.is_final_round) {
-      gameSession = <Final game={game} timer={timer} />;
+      gameSession = (
+        <div class="flex w-full justify-center">
+          <div class="lg:w-5/6 sm:w-11/12 sm:px-8 md:w-4/6 w-11/12 flex flex-col space-y-6 pt-5">
+            <Final game={game} timer={timer} />
+          </div>
+        </div>
+      );
     } else {
       gameSession = (
-        <div class="py-12">
-          <Round game={game} />;
+        <div class="flex flex-col space-y-10 py-5">
+          <Round game={game} />
           <QuestionBoard round={game.rounds[game.round]} />
           <div class="flex flex-row justify-around">
             <TeamName game={game} team={0} />
@@ -144,10 +151,10 @@ export default function Game(props) {
     }
 
     return (
-      <div style={{ minWidth: "100vh" }} class="min-h-full">
+      <>
         {gameSession}
         {error !== "" ? <p class="text-2xl text-red-700">{error}</p> : null}
-      </div>
+      </>
     );
   } else {
     return (
