@@ -102,7 +102,7 @@ export default function Game(props) {
         } else if (json.action === "title_start") {
           titleAudio.play();
         } else if (json.action === "title_stop") {
-          titleAudio.pause();
+          titleAudio.load();
         } else {
           console.error("didn't expect", json);
         }

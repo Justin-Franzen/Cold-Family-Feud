@@ -5,8 +5,7 @@ import { useTranslation } from "react-i18next";
 import "../i18n/i18n";
 import LanguageSwitcher from "../components/language";
 import Game_Host from "../components/game-host";
-import Buzzer from "../components/buzzer";
-import TitleNoInsert from "../components/title-no-insert";
+import Title from "../components/title-logo";
 import cookieCutter from "cookie-cutter";
 
 export default function Home() {
@@ -155,7 +154,7 @@ export default function Home() {
         <main>
           <div class="flex flex-col items-center pt-12 space-y-5 h-screen">
             <div class="lg:w-1/4 w-1/2">
-              <TitleNoInsert />
+              <Title insert="" />
             </div>
             <div class="flex flex-col space-y-12 flex-grow items-center">
               <div>

@@ -30,7 +30,7 @@ function Answers(props) {
         ) : null}
       </div>
       <div class="bg-black w-16 font-extrabold uppercase flex justify-center items-center rounded">
-        {x.revealed ? (
+        {x.revealed && x.revealed_points ? (
           <p class={`text-2xl ${props.hide ? "invisible" : ""}`}>
             {t("number", { count: x.points })}
           </p>

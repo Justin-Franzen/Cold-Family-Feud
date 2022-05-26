@@ -166,12 +166,15 @@ const ioHandler = (req, res) => {
             let game = rooms[message.room].game;
             game.teams[0].points = 0;
             game.teams[1].points = 0;
+            game.teams[0].mistakes = 0;
+            game.teams[1].mistakes = 0;
             game.round = 0;
             game.title = true;
             game.rounds = message.data.rounds;
             // clone the final round so we can store data about the second final round
             game.final_round = message.data.final_round;
             game.final_round_2 = message.data.final_round;
+            game.hide_first_round = false;
             game.gameCopy = [];
             game.final_round_timers = message.data.final_round_timers;
             game.point_tracker = new Array(message.data.rounds.length).fill(0);

@@ -9,30 +9,47 @@ function debounce(callback, wait = 400) {
   let timeout;
   return (...args) => {
     clearTimeout(timeout);
-    timeout = setTimeout(function() {
+    timeout = setTimeout(function () {
       callback.apply(this, args);
     }, wait);
   };
 }
-const playButton ={
+const playButton = {
   borderTop: "10px solid white",
   borderBottom: "10px solid white",
   borderLeft: "20px solid black",
   height: "0px",
-}
-const stopButton ={
+};
+const stopButton = {
   border: "10px solid black",
   height: "0px",
-}
+};
+
+const disabledButton = {
+  opacity: "50%",
+};
 
 function TitleMusic(props) {
   const { i18n, t } = useTranslation();
   return (
     <div class="flex flex-row items-center space-x-5  p-5">
       <h3 class="text-2xl ">{t("Title Music")}</h3>
-      <audio controls>
-        <source src="title.mp3" type="audio/mpeg" />
-      </audio>
+      <button
+        class="border-4 rounded p-3 text-2xl flex-grow"
+        onClick={() => {
+          props.send({ action: "title_start" });
+        }}
+      >
+        <div style={playButton}></div>
+      </button>
+      <button
+        class="border-4 rounded p-3 text-2xl flex-grow bg-"
+        onClick={() => {
+          props.send({ action: "title_stop" });
+        }}
+      >
+        <div style={stopButton}></div>
+      </button>
     </div>
   );
 }
@@ -85,9 +102,24 @@ function FinalRoundButtonControls(props) {
   let control_round = props.game.is_final_second
     ? props.game.final_round_2
     : props.game.final_round;
-  return control_round?.map((x) => (
+  return control_round?.map((x, index) => (
     <div class="flex-col flex space-y-5 p-12 border-2">
       <p class="text-4xl font-bold ">{x.question}</p>
+      {props.game.is_final_second ? (
+        <div class="text-2xl font-bold">
+          First round answer: {props.game.final_round[index].input}
+          <button
+            class="border-4 rounded p-3 text-2xl flex-grow float-right bg-red-200"
+            onClick={() => {
+              props.send({ action: "mistake" });
+            }}
+          >
+            {t("wrong")}
+          </button>
+        </div>
+      ) : (
+        null
+      )}
       <div class="flex flex-row space-x-5 pb-7">
         {/* ANSWER SELECTION FINAL ROUND */}
         <input
@@ -98,6 +130,11 @@ function FinalRoundButtonControls(props) {
             x.input = e.target.value;
             props.setGame((prv) => ({ ...prv }));
           }}
+          onKeyDown={(e) => {
+            if (e.keyCode === 27) {
+              props.send({ action: "mistake" });
+            }
+            }}
         />
         <select
           value={x.selection}
@@ -119,8 +156,11 @@ function FinalRoundButtonControls(props) {
       <div class="flex flex-row ">
         <button
           class="border-4 rounded p-5 text-3xl flex-grow"
+          disabled = {!x.revealed}
+          style = {x.revealed ? {} : disabledButton}
           onClick={() => {
             x.points = 0;
+            x.revealed_points = true;
             props.setGame((prv) => ({ ...prv }));
             props.send({ action: "data", data: props.game });
             props.send({ action: "final_wrong" });
@@ -143,11 +183,15 @@ function FinalRoundButtonControls(props) {
 
         <button
           class="border-4 rounded p-5 text-3xl flex-grow"
+          disabled = {!x.revealed}
+          style = {x.revealed ? {} : disabledButton}
           onClick={() => {
             x.points = x.answers[x.selection][1];
+            x.revealed_points = true;
             props.setGame((prv) => ({ ...prv }));
             props.send({ action: "data", data: props.game });
             props.send({ action: "final_submit" });
+            console.log(x);
           }}
         >
           {t("submit")}
@@ -243,9 +287,7 @@ export default function Admin(props) {
       console.debug("This is current round", current_round);
     }
 
-    const disabledButton = {
-      opacity: '50%',
-    };
+
 
     return (
       <div
@@ -306,6 +348,9 @@ export default function Admin(props) {
                         file: e.target.value,
                         lang: i18n.language,
                       });
+                      fetch('/reset_buttons')
+                                .then(res => res.json())
+                                .catch(console.log)
                     }}
                   >
                     <option disabled selected value></option>
@@ -336,13 +381,13 @@ export default function Admin(props) {
                       if (file) {
                         var reader = new FileReader();
                         reader.readAsText(file, "utf-8");
-                        reader.onload = function(evt) {
+                        reader.onload = function (evt) {
                           let data = JSON.parse(evt.target.result);
                           console.debug(data);
                           // TODO some error checking for invalid game data
                           send({ action: "load_game", data: data });
                         };
-                        reader.onerror = function(evt) {
+                        reader.onerror = function (evt) {
                           console.error("error reading file");
                         };
                       }
@@ -447,9 +492,7 @@ export default function Admin(props) {
             <div class="flex-col space-y-5 p-5">
               <hr />
               <div class="flex flex-row justify-evenly items-baseline">
-                <TitleMusic 
-                send={send}
-                />
+                <TitleMusic send={send} />
                 {/* CURRENT SCREEN TEXT */}
                 <p class="text-2xl text-center pt-5">
                   {" "}
@@ -563,6 +606,9 @@ export default function Admin(props) {
                     });
                     console.debug(game.round);
                     send({ action: "data", data: game });
+                    fetch('/reset_buttons')
+                    .then(res => res.json())
+                    .catch(console.log)
                   }}
                 >
                   {t("Next Round")}
@@ -614,8 +660,9 @@ export default function Admin(props) {
                 <div class=" text-white rounded border-4 grid grid-rows-4 grid-flow-col  p-3 mx-10 mt-5 gap-3 ">
                   {current_round.answers.map((x) => (
                     <div
-                      class={`${x.trig ? "bg-gray-600" : "bg-blue-600"
-                        } font-extrabold uppercase rounded border-2 text-2xl rounded `}
+                      class={`${
+                        x.trig ? "bg-gray-600" : "bg-blue-600"
+                      } font-extrabold uppercase rounded border-2 text-2xl rounded `}
                     >
                       <button
                         class="flex flex-row p-5 justify-center min-h-full items-center min-w-full"
@@ -659,6 +706,7 @@ export default function Admin(props) {
                               class="border-4 bg-red-200 hover:bg-red-400 rounded p-2"
                               onClick={() => {
                                 send({ action: "clearbuzzers" });
+                                
                               }}
                             >
                               {t("Clear Buzzers")}
@@ -825,7 +873,6 @@ export default function Admin(props) {
                     game={game}
                     setGame={props.setGame}
                     send={send}
-                    game={game}
                   />
                 </div>
               </div>
