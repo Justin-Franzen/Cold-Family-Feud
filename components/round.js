@@ -53,7 +53,7 @@ export default function Round(props) {
         <TeamPointTracker points={props.game.teams[1].points} />
       </div>
       <div class="my-5 flex flex-row justify-center">
-        <p class="text-end text-3xl ">{round.question}</p>
+        { <p class="text-end text-3xl ">{/*round.question*/}</p> }
         {round.multiply > 1 ? (
           <div style={{ transform: "translate(0px, -7px)" }}>
             <p class="text-2xl text-start">

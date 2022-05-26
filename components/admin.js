@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import "../i18n/i18n";
 import Players from "./Admin/players";
 import LanguageSwitcher from "./language";
+import axios from 'axios';
 
 function debounce(callback, wait = 400) {
   let timeout;
@@ -531,6 +532,7 @@ export default function Admin(props) {
                       x{t("number", { count: current_round.multiply })}
                     </h3>
                   </div>
+                  <button onClick={() => {send({ action: "mistake" });}} >Wrong answer</button>
                 </div>
 
                 {/* GAME BOARD BUTTONS */}
@@ -655,6 +657,7 @@ export default function Admin(props) {
                             rnd.points = 0;
                             rnd.input = "";
                             rnd.revealed = false;
+                            rnd.revealed_points = false;
                             rnd.selection = 0;
                           });
                           props.setGame((prv) => ({ ...prv }));
@@ -768,7 +771,7 @@ export default function Admin(props) {
                           <button
                             class="border-4 rounded p-3 text-2xl flex-grow float-right bg-red-200"
                             onClick={() => {
-                              send({ action: "final_wrong" });
+                              send({ action: "mistake" });
                             }}
                           >
                             {t("wrong")}
@@ -787,6 +790,11 @@ export default function Admin(props) {
                             x.input = e.target.value;
                             props.setGame((prv) => ({ ...prv }));
                           }}
+                          onKeyDown={(e) => {
+                            if (e.keyCode === 27) {
+                              send({ action: "mistake" });
+                            }
+                            }}
                         />
                         <select
                           value={x.selection}
