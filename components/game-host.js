@@ -1,22 +1,14 @@
 import { useState, useEffect, useRef } from "react";
-import TitleLogo from "./title-logo";
 import "tailwindcss/tailwind.css";
 import { useTranslation } from "react-i18next";
 import "../i18n/i18n";
-import cookieCutter from "cookie-cutter";
-import Round from "./round";
-import QuestionBoard from "./question-board.js";
-import TeamName from "./team-name.js";
-import Final from "./final";
+
 
 let timerInterval = null;
 
 export default function Buzzer(props) {
   const { i18n, t } = useTranslation();
-  const [buzzed, setBuzzed] = useState(false);
-  const [buzzerReg, setBuzzerReg] = useState(null);
   const [error, setError] = useState();
-  const [timer, setTimer] = useState(0);
   let refreshCounter = 0;
 
   let game = props.game;
@@ -58,21 +50,6 @@ export default function Buzzer(props) {
       } else if (json.action === "quit") {
         props.setGame(null);
         props.setTeam(null);
-      } else if (json.action === "set_timer") {
-        setTimer(json.data);
-      } else if (json.action === "stop_timer") {
-        clearInterval(timerInterval);
-      } else if (json.action === "start_timer") {
-        let limit = json.data;
-        timerInterval = setInterval(() => {
-          if (limit > 0) {
-            limit = limit - 1;
-            setTimer(limit);
-          } else {
-            clearInterval(timerInterval);
-            setTimer(json.data);
-          }
-        }, 1000);
       } else if (json.action === "data") {
         if (json.data.title_text === "Change Me") {
           json.data.title_text = t("changeMe");
@@ -84,10 +61,6 @@ export default function Buzzer(props) {
           json.data.teams[1].name = `${t("team")} ${t("number", { count: 2 })}`;
         }
         props.setGame(json.data);
-      } else if (json.action === "buzzed") {
-        setBuzzed(true);
-      } else if (json.action === "clearbuzzers") {
-        setBuzzed(false);
       } else if (json.action === "change_lang") {
         console.debug("Language Change", json.data);
         i18n.changeLanguage(json.data);
@@ -101,8 +74,7 @@ export default function Buzzer(props) {
     });
   }, []);
 
-  if (game.teams != null) {
-    console.debug("hello");
+  if (game.teams != null && game.rounds != null) {
     console.debug(game);
     return (
       <div
